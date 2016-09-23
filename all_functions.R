@@ -279,13 +279,9 @@ extract_pcp = function(vor, cso, pcp_unit = 'mm', write_csv = FALSE){
   # Make the output data frame, all ids, one day ... 
   output1 = data.frame(id = cso$NPDES_ID, pcp = p$precip, ac = cso$ACRES)
   output1$pcp = ghcn_default_mm(output1$pcp)
-  out1 = aggregate.data.frame(output1$pcp, by = list(output1$id), FUN = sum)
-  out2 = aggregate.data.frame(output1$ac, by = list(output1$id), FUN = sum)
-  out = merge(out1, out2, by = 'Group.1')
-  colnames(out) = c('id', 'pcp', 'ac')
   
   if(pcp_unit == 'in'){
-    out$pcp = mm2in(out$pcp)
+    output1$pcp = mm2in(output1$pcp)
   } 
   if(pcp_unit == 'mm') {}
   
@@ -294,7 +290,7 @@ extract_pcp = function(vor, cso, pcp_unit = 'mm', write_csv = FALSE){
     write.csv(out, paste('station_pcp', 'cso_overflow.csv', sep = '_'), row.names = FALSE)
   }
 
-  return(out)
+  return(output1)
 }
 
 finish_pcp <- function(out, dates, write_csv = TRUE){ 

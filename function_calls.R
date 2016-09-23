@@ -43,9 +43,6 @@ out = mclapply(vor_l, extract_pcp, cso = cso,  write_csv = FALSE)
 # !! call 
 output = finish_pcp(out, test$dates, write_csv = FALSE)
 
-#order it if you want 
-outp = output[order(output$id),]
-
 # cso conv function. 
 # define the TT cso equation .... 
 # outside the other functions, because this makes it CBP specific ....
@@ -60,7 +57,14 @@ cso_est = function(x, threshold = 0.01){
 
 
 #calculate cso output on outp
-outp$cso = cso_est(outp$pcp) * outp$ac 
+output$cso = cso_est(output$pcp) * output$ac 
+
+out1 = aggregate.data.frame(output$pcp, by = list(output$id), FUN = sum)
+out2 = aggregate.data.frame(output$ac, by = list(output$id), FUN = sum)
+out = merge(out1, out2, by = 'Group.1')
+colnames(out) = c('id', 'pcp', 'ac')
+
+outp = out[order(out$id),]
 
 # write it separte,
 write.csv(outp, paste(getwd(), 'output_pcp.csv', sep = '/'), row.names = FALSE)
