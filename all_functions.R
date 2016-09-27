@@ -307,7 +307,6 @@ finish_pcp <- function(out, dates, write_csv = TRUE){
   return(output)
 }
 
-
 plot_extract_pcp = function(vor, dates, cso, date_lab = dates[[1]], pad.x = .5, pad.y = .5) {
   # reproject the data onto a "longlat" projection
   vor2 = vor[[which(dates == date_lab)]]

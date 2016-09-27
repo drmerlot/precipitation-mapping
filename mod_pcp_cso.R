@@ -5,14 +5,21 @@
 #
 #
 ############################
+install.packages('pblappy')
+install.packages('sp')
+install.packages('rgdal')
+install.packages('gstat')
 
+require(pblappy)
+require(sp)
+require(rgdal)
+require(gstat)
+require(parallel)
 # read in the pcp data from the mod  
+
 setwd('~/Desktop/pcp')
-
 all_files = list.files('.')
-
 all_frames = lapply(all_files,read.csv)
-
 mod_pcp_all = do.call(rbind, all_frames)
 
 mod_pcp = mod_pcp_all[,-c(6,7,8,9,10,11,12)]
@@ -26,16 +33,13 @@ mod_pcp$day = NULL
 mod_order = mod_pcp[order(mod_pcp$dates),]
 mod_order$sp = as.factor(mod_order$dates)
 
+dates = mod_order$dates
+
 pcp_days = split(mod_order, mod_order$sp)
 
-require(sp)
-require(rgdal)
-require(gstat)
 directory = "/Users/grad/Desktop/lseg"
 layer_name = "P6Beta_v3_LSegs_081516_Albers"
 lseg = readOGR(dsn = directory, layer = layer_name)
-
-pcp_days = data.frame(seg = lseg@data$FIPS_NHL, precip.in. = c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, runif(224, 0, 0.023)))
 
 lseg_day_pcp = function(pcp_days, lseg){
   ids = lseg@data$FIPS_NHL
@@ -48,12 +52,14 @@ lseg_day_pcp = function(pcp_days, lseg){
   
 }
 
-te = lapply(pcp_days, lseg_day_pcp, lseg)
+lseg_pcp = lapply(pcp_days, lseg_day_pcp, lseg)
 
-# dont do this 
+################################
+# plots
 lseg_plot = lseg
 lseg_plot@data$dates = NULL
 spplot(lseg_plot)
+###############################
 
 directory = "/Users/grad/Desktop/umces/cso/css"
 layer_name = "CSS_final_jan14_clean"
@@ -68,7 +74,7 @@ extract_pcp_mod = function(lseg, cso, pcp_unit = 'in', threshold = 0.01, write_c
   p <- over(cso, lseg[2], layer = 3, fun = mean, na.rm = FALSE)
   
   # Make the output data frame, all ids, one day ... 
-  output1 = data.frame(id = cso$NPDES_ID, pcp = p$precip.in., ac = cso$ACRES)
+  output1 = data.frame(id = cso$NPDES_ID, pcp = p$precip.in., ac = cso$ACRES )
   
   if(pcp_unit == 'mm'){
     print('currently not supported')
@@ -79,22 +85,49 @@ extract_pcp_mod = function(lseg, cso, pcp_unit = 'in', threshold = 0.01, write_c
   
   if(write_csv == TRUE){
     # here is one-days output......
-    write.csv(out, paste('station_pcp', 'cso_overflow.csv', sep = '_'), row.names = FALSE)
+    write.csv(out, paste('station_pcp', 'cso_mod_pcp.csv', sep = '_'), row.names = FALSE)
   }
   
   return(output1)
 }
 
-# test extraction ... 
-library(parallel)
-mod_extract = mclapply(te, extract_pcp_mod, cso)
+#  extraction the pcp ... 
+mod_pcp = pblapply(lseg_pcp, extract_pcp_mod, cso)
 
+mod_all_pcp = do.call('rbind', mod_pcp)
+
+write.csv(mod_pcp, '~/Desktop/pcp/modeled_pcp.csv')
+
+# outside the other functions, because this makes it CBP specific ....
+cso_est = function(x){
+  mm_out = x / 10
+  inches = mm_out*0.03937
+  cso_est = 1567*inches^2 - 46.955*inches + 1309.8
+  cso_est = cso_est / 1e6
+  return(cso_est)
+}
+
+#calculate cso output on outp
+output$cso = cso_est(output$pcp) * output$ac 
+
+out1 = aggregate.data.frame(output$pcp, by = list(output$id), FUN = sum)
+out2 = aggregate.data.frame(output$ac, by = list(output$id), FUN = sum)
+out = merge(out1, out2, by = 'Group.1')
+colnames(out) = c('id', 'pcp', 'ac')
+
+outp = out[order(out$id),]
+
+# write it separte,
+write.csv(outp, paste(getwd(), 'output_pcp.csv', sep = '/'), row.names = FALSE)
+# end call 
+
+## then apply the cso equation and aggregation ... 
+
+
+##########################
+#observing the results 
 cso_orig = read.csv('~/Desktop/cso.csv')
 tetra_tech = cso_orig[,5]
-
-just = runif(length(tetra_tech), -9, 6)
-
-mod = tetra_tech + just
 
 dat = data.frame(tetra_tech, mod)
 
@@ -106,6 +139,7 @@ library(ggplot2)
 ggplot(dat, aes(x=mod, y=tetra_tech)) +
   geom_point(position=position_jitter(w=0.1,h=0)) +
   xlab('mod')
+
 
 plot_ecdf <- function(dat, legend_names = colnames(dat), title = 'ECDFs', xlab = 'value', ylab = 'probability', out_type = 'display', file_name = 'ecdf-plot', out_dir = getwd()){
   require(ggplot2)

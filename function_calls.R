@@ -49,7 +49,7 @@ output = finish_pcp(out, test$dates, write_csv = FALSE)
 # cso conv function. 
 # define the TT cso equation .... 
 # outside the other functions, because this makes it CBP specific ....
-cso_est = function(x, threshold = 0.01){
+cso_est = function(x){
   mm_out = x / 10
   inches = mm_out*0.03937
   cso_est = 1567*inches^2 - 46.955*inches + 1309.8
