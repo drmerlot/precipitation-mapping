@@ -250,11 +250,11 @@ thiessen_poly <- function(pcp1, plot_out = FALSE) {
 
 # define the TT cso equation .... 
 # outside the other functions, because this makes it CBP specific ....
-cso_est = function(x, threshold = 0.01){
+cso_est = function(x){
   mm_out = x / 10
   inches = mm_out*0.03937
   cso_est = 1567*inches^2 - 46.955*inches + 1309.8
-  cso_est[which(x <= threshold)] <- 0
+  #cso_est[which(x <= threshold)] <- 0
   cso_est = cso_est / 1e6
   return(cso_est)
 }
@@ -269,7 +269,7 @@ mm2in = function(x) {
 }
 
 
-extract_pcp = function(vor, cso, pcp_unit = 'mm', write_csv = FALSE){
+extract_pcp = function(vor, cso, pcp_unit = 'mm', threshold = 0.01, write_csv = FALSE){
   ## prject vor to same as the input shape.. 
   vor <- spTransform(vor, proj4string(cso))
   ### get the precip data ... 
@@ -282,8 +282,11 @@ extract_pcp = function(vor, cso, pcp_unit = 'mm', write_csv = FALSE){
   
   if(pcp_unit == 'in'){
     output1$pcp = mm2in(output1$pcp)
+    output1$pcp[which(output1$pcp <= 0.01)] <- 0
   } 
-  if(pcp_unit == 'mm') {}
+  if(pcp_unit == 'mm') {
+    output1$pcp[which(output1$pcp <= 0.01)] <- 0
+  }
   
   if(write_csv == TRUE){
     # here is one-days output......

@@ -1,3 +1,6 @@
+
+
+
 # calls for cso precip.. 
 
 
@@ -50,11 +53,10 @@ cso_est = function(x, threshold = 0.01){
   mm_out = x / 10
   inches = mm_out*0.03937
   cso_est = 1567*inches^2 - 46.955*inches + 1309.8
-  cso_est[which(x <= threshold)] <- 0
+  #cso_est[which(x <= threshold)] <- 0
   cso_est = cso_est / 1e6
   return(cso_est)
 }
-
 
 #calculate cso output on outp
 output$cso = cso_est(output$pcp) * output$ac 
@@ -82,10 +84,6 @@ maxs = which(lens == max(unlist(lens)))
 plot.max = maxs[[length(maxs)]]
 date.max = dates[[plot.max]]
 
-
 theme_set(theme_gray(base_size = 22))
 plot_extract_pcp(vor = vor_l, dates = dates, cso = cso, date_lab = dates[[which(dates == date.min)]])
-
-
-
 
