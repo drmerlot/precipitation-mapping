@@ -96,49 +96,86 @@ mod_pcp = pblapply(lseg_pcp, extract_pcp_mod, cso)
 
 mod_all_pcp = do.call('rbind', mod_pcp)
 
-write.csv(mod_pcp, '~/Desktop/pcp/modeled_pcp.csv')
+write.csv(mod_all_pcp, '~/Desktop/pcp/modeled_pcp.csv')
 
 # outside the other functions, because this makes it CBP specific ....
 cso_est = function(x){
-  mm_out = x / 10
-  inches = mm_out*0.03937
-  cso_est = 1567*inches^2 - 46.955*inches + 1309.8
+  #mm_out = x / 10
+  #inches = mm_out*0.03937
+  cso_est = 1567*x^2 - 46.955*x + 1309.8
   cso_est = cso_est / 1e6
   return(cso_est)
 }
 
 #calculate cso output on outp
-output$cso = cso_est(output$pcp) * output$ac 
+mod_all_pcp$cso = cso_est(mod_all_pcp$pcp) * mod_all_pcp$ac 
 
-out1 = aggregate.data.frame(output$pcp, by = list(output$id), FUN = sum)
-out2 = aggregate.data.frame(output$ac, by = list(output$id), FUN = sum)
+date_labs = as.Date(row.names(mod_all_pcp))
+mod_all_pcp$ag_labs = paste(mod_all_pcp$id, date_labs, sep = '-')
+
+out1 = aggregate.data.frame(mod_all_pcp$pcp, by = list(mod_all_pcp$ag_labs), FUN = mean)
+out2 = aggregate.data.frame(mod_all_pcp$ac, by = list(mod_all_pcp$ag_labs), FUN = sum)
 out = merge(out1, out2, by = 'Group.1')
-colnames(out) = c('id', 'pcp', 'ac')
-
+id = substr(out$Group.1, 1, 9)
+dates = as.Date(substr(out$Group.1, 11, 20))
+out[,1] = id
+out$date = dates
+colnames(out) = c('id', 'pcp', 'date')
 outp = out[order(out$id),]
+year = format(outp$date, '%Y')
+month = format(outp$date, '%m')
+day = format(outp$date, '%d')
+outp$year = as.numeric(year)
+outp$month = as.numeric(month)
+outp$day = as.numeric(day)
+outp$date = NULL
 
 # write it separte,
-write.csv(outp, paste(getwd(), 'output_pcp.csv', sep = '/'), row.names = FALSE)
+write.csv(outp, '~/Desktopoutput_pcp.csv', row.names = FALSE)
 # end call 
 
 ## then apply the cso equation and aggregation ... 
-
+ 
 
 ##########################
 #observing the results 
 cso_orig = read.csv('~/Desktop/cso.csv')
-tetra_tech = cso_orig[,5]
+cso_orig$DC0021199 = as.character(cso_orig$DC0021199)
 
-dat = data.frame(tetra_tech, mod)
+outp = outp[order(outp$year, outp$id),]
+
+cso_orig = cso_orig[order(cso_orig$X2009.00, cso_orig$DC0021199),]
+
+st = nrow(outp) - (nrow(cso_orig) - 365*64-64)
+ed = nrow(outp)
+
+head(outp[st:ed,])
+tail(outp[st:ed,])
+
+outp_c = outp[st:ed,]
+
+cso_orig_c = cso_orig[-which(cso_orig$X2009.00 == 2015),]
+
+cso_orig_c = cso_orig_c[64:nrow(cso_orig_c),]
+
+head(cso_orig_c)
+tail(cso_orig_c)
+head(outp_c)
+tail(outp_c)
+
+our_version = outp_c$cso
+tetra_tech = cso_orig_c$X0.00
+
+dat = data.frame(tetra_tech, our_version)
 
 plot_ecdf(dat)
 
-NSE(mod, tetra_tech)
+NSE(our_version, tetra_tech)
 
 library(ggplot2)
-ggplot(dat, aes(x=mod, y=tetra_tech)) +
+ggplot(dat, aes(x=our_version, y=tetra_tech)) +
   geom_point(position=position_jitter(w=0.1,h=0)) +
-  xlab('mod')
+  xlab('out_version')
 
 
 plot_ecdf <- function(dat, legend_names = colnames(dat), title = 'ECDFs', xlab = 'value', ylab = 'probability', out_type = 'display', file_name = 'ecdf-plot', out_dir = getwd()){
