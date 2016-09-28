@@ -108,7 +108,7 @@ cso_est = function(x){
 }
 
 #calculate cso output on outp
-mod_all_pcp$cso = cso_est(mod_all_pcp$pcp) * mod_all_pcp$ac 
+#mod_all_pcp$cso = cso_est(mod_all_pcp$pcp) * mod_all_pcp$ac 
 
 date_labs = as.Date(row.names(mod_all_pcp))
 mod_all_pcp$ag_labs = paste(mod_all_pcp$id, date_labs, sep = '-')
@@ -120,7 +120,7 @@ id = substr(out$Group.1, 1, 9)
 dates = as.Date(substr(out$Group.1, 11, 20))
 out[,1] = id
 out$date = dates
-colnames(out) = c('id', 'pcp', 'date')
+colnames(out) = c('id', 'pcp', 'ac', 'date')
 outp = out[order(out$id),]
 year = format(outp$date, '%Y')
 month = format(outp$date, '%m')
@@ -129,6 +129,10 @@ outp$year = as.numeric(year)
 outp$month = as.numeric(month)
 outp$day = as.numeric(day)
 outp$date = NULL
+
+## now cacluated cso, 
+outp$cso = cso_est(outp$pcp) * mod_all_pcp$ac 
+
 
 # write it separte,
 write.csv(outp, '~/Desktopoutput_pcp.csv', row.names = FALSE)
