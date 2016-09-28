@@ -131,11 +131,11 @@ outp$day = as.numeric(day)
 outp$date = NULL
 
 ## now cacluated cso, 
-outp$cso = cso_est(outp$pcp) * mod_all_pcp$ac 
+outp$cso = cso_est(outp$pcp) * outp$ac 
 
 
 # write it separte,
-write.csv(outp, '~/Desktopoutput_pcp.csv', row.names = FALSE)
+write.csv(outp, '~/Desktop/output_pcp.csv', row.names = FALSE)
 # end call 
 
 ## then apply the cso equation and aggregation ... 
